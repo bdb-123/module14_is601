@@ -57,9 +57,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
       
-      - name: Install Playwright browsers
+      - name: Debug environment
         run: |
-          playwright install --with-deps chromium
+          echo "DATABASE_URL: $DATABASE_URL"
+          echo "Python version:"
+          python --version
+          echo "Installed packages:"
+          pip list | grep -E "pytest|sqlalchemy|fastapi"
       
       - name: Run pytest (unit and integration tests only)
         run: |
