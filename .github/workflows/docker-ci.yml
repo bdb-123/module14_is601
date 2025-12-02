@@ -61,28 +61,27 @@ jobs:
         run: |
           playwright install --with-deps chromium
       
-      - name: Verify database connection
+      - name: Verify services are ready
         run: |
-          python -c "
-          import psycopg2
-          try:
-              conn = psycopg2.connect(
-                  host='localhost',
-                  port=5432,
-                  user='testuser',
-                  password='testpass',
-                  database='testdb'
-              )
-              print('✅ Database connection successful')
-              conn.close()
-          except Exception as e:
-              print(f'❌ Database connection failed: {e}')
-              exit(1)
-          "
+          echo "Waiting for PostgreSQL..."
+          for i in {1..30}; do
+            if python -c "import psycopg2; conn = psycopg2.connect(host='localhost', port=5432, user='testuser', password='testpass', database='testdb'); conn.close(); print('✅ PostgreSQL ready')" 2>/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          
+          echo "Waiting for Redis..."
+          for i in {1..30}; do
+            if python -c "import redis; r = redis.Redis(host='localhost', port=6379); r.ping(); print('✅ Redis ready')" 2>/dev/null; then
+              break
+            fi
+            sleep 1
+          done
       
-      - name: Run all tests (stop on first failure)
+      - name: Run all tests
         run: |
-          pytest -v -x --tb=short --cov=app --cov-report=term-missing 2>&1 | tee pytest-output.log || (cat pytest-output.log && exit 1)
+          pytest -v --tb=short --cov=app --cov-report=term-missing --maxfail=3
 
   build-and-push:
     name: Build and Push Docker Image
