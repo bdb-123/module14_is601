@@ -57,17 +57,17 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
       
-      - name: Debug environment
+      - name: Install Playwright browsers
         run: |
-          echo "DATABASE_URL: $DATABASE_URL"
-          echo "Python version:"
-          python --version
-          echo "Installed packages:"
-          pip list | grep -E "pytest|sqlalchemy|fastapi"
+          playwright install --with-deps chromium
       
-      - name: Run pytest (unit and integration tests only)
+      - name: Initialize database tables
         run: |
-          pytest tests/unit tests/integration -v --cov=app --cov-report=term-missing
+          python -c "from app.database import Base, engine; Base.metadata.create_all(bind=engine)"
+      
+      - name: Run all tests (unit, integration, and e2e)
+        run: |
+          pytest -v --cov=app --cov-report=term-missing
 
   build-and-push:
     name: Build and Push Docker Image
