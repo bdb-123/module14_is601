@@ -61,13 +61,28 @@ jobs:
         run: |
           playwright install --with-deps chromium
       
-      - name: Initialize database tables
+      - name: Verify database connection
         run: |
-          python -c "from app.database import Base, engine; Base.metadata.create_all(bind=engine)"
+          python -c "
+          import psycopg2
+          try:
+              conn = psycopg2.connect(
+                  host='localhost',
+                  port=5432,
+                  user='testuser',
+                  password='testpass',
+                  database='testdb'
+              )
+              print('✅ Database connection successful')
+              conn.close()
+          except Exception as e:
+              print(f'❌ Database connection failed: {e}')
+              exit(1)
+          "
       
-      - name: Run all tests (unit, integration, and e2e)
+      - name: Run all tests (stop on first failure)
         run: |
-          pytest -v --cov=app --cov-report=term-missing
+          pytest -v -x --tb=short --cov=app --cov-report=term-missing 2>&1 | tee pytest-output.log || (cat pytest-output.log && exit 1)
 
   build-and-push:
     name: Build and Push Docker Image
