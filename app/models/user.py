@@ -158,6 +158,11 @@ class User(Base):
             str: The hashed password
         """
         from app.auth.jwt import get_password_hash
+        # Bcrypt has a 72-byte limit, so truncate if necessary
+        password_bytes = password.encode('utf-8')
+        if len(password_bytes) > 72:
+            # Truncate to 72 bytes, ensuring we don't break multi-byte characters
+            password = password_bytes[:72].decode('utf-8', errors='ignore')
         return get_password_hash(password)
 
     @classmethod
