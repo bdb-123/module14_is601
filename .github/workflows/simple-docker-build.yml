@@ -9,6 +9,31 @@ jobs:
   test-build-and-push:
     runs-on: ubuntu-latest
 
+    # Start Postgres and Redis for the tests
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: appuser
+          POSTGRES_PASSWORD: changeme
+          POSTGRES_DB: module14_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U appuser -d module14_db"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+
+    env:
+      # Match what your app/tests expect
+      DATABASE_URL: postgresql://appuser:changeme@localhost:5432/module14_db
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -23,6 +48,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pytest
+          # Small delay to let Postgres finish its health check
+          sleep 10
           pytest
 
       - name: Log in to Docker Hub
@@ -40,4 +67,3 @@ jobs:
           context: .
           push: true
           tags: bdb67/module14_is601:latest
-
